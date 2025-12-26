@@ -1,0 +1,325 @@
+﻿Міністерство освіти та науки України
+Харківський національний університет радіоелектроніки
+
+
+Кафедра програмної інженерії
+
+
+
+
+
+Звіт до лабораторної роботи №5
+з дисципліни «Аналіз та рефакторинґ коду»
+на тему: «Програмна система для 3D-друку»
+
+
+
+
+
+
+
+Виконала	
+ст. гр. ПЗПІ-23-3                                                               			Світенко С.М.
+Перевірив
+ст. викладач катедри ПІ 					Сокорчук І.П.
+
+
+
+
+
+Харків 2025
+1 ІСТОРІЯ ЗМІН
+№ДатаВерсія звітуОпис змін та виправлень118.12.251Проаналізовано ринок клауд провайдерів219.12.252Microsoft Azure integration319.12.253Завершено з програмною реалізацією та звітом
+
+
+2 ЗАВДАННЯ
+     Мета роботи: 
+     Метою даної лабораторної роботи є практичне освоєння процесу розгортання повнофункціональної програмної системи в production-середовищі на базі хмарної інфраструктури Microsoft Azure. В рамках роботи передбачається розгортання серверної частини Web API на віртуальній машині з операційною системою Windows Server 2025 та веб-сервером Internet Information Services, а також налаштування бази даних PostgreSQL на платформі Azure Database for PostgreSQL. 
+     Робота спрямована на отримання практичних навичок конфігурування веб-серверів, управління базами даних в хмарному середовищі, забезпечення безпеки через SSL/TLS протоколи, налаштування мережевих правил доступу та firewall, а також на засвоєння принципів моніторингу та підтримки розгорнутих систем. Особлива увага приділяється використанню сучасних DevOps-практик, включаючи роботу з міграціями баз даних через Entity Framework Core, конфігурування середовищ виконання .NET, та застосування принципів Infrastructure as Code. 
+     Крім технічних аспектів, робота має на меті вироблення розуміння архітектурних рішень при виборі інфраструктури для розгортання, оцінки параметрів продуктивності та надійності систем, а також формування навичок документування процесів розгортання для подальшого використання в командній розробці.
+
+3 ОПИС ВИКОНАНОЇ РОБОТИ
+3.1. Деплоймент серверної частини (Web API)
+3.1.1. Вибір сервісу та інфраструктури
+     Для розгортання серверної частини програмної системи було обрано інфраструктуру Microsoft (Azure). Система розгорнута на віртуальній машині (VM) з наступними характеристиками:
+* Операційна система: Windows Server 2025
+* Веб-сервер: Internet Information Services (IIS) версії 10.0+
+* Середовище виконання: .NET 10.0
+* Тип розгортання: Self-contained ASP.NET Core Web API
+* Архітектура: x64
+* Розмір VM: Standard B2ls v3 (2 vCPU, 4 GB RAM)
+Вибір Windows Server 2025 та IIS обґрунтовується: 
+* Нативною підтримкою .NET додатків з оптимізованою продуктивністю  
+* Високою продуктивністю та стабільністю IIS як веб-сервера enterprise-рівня
+* Зручними інструментами адміністрування через графічний інтерфейс  
+* Можливістю інтеграції з екосистемою Microsoft (Active Directory, Azure Monitor) 
+* Надійною підтримкою SSL/TLS сертифікатів та сучасних протоколів безпеки 
+* Вбудованими механізмами кешування та оптимізації статичного контенту 
+* Широкими можливостями логування та діагностики через Event Viewer
+3.1.2. Процес розгортання Web API
+     Розгортання серверної частини включає наступні етапи:
+КРОК 1: 
+Підготовка середовища сервера 
+* Клонування вихідного коду з Git-репозиторію на сервер 
+* Інсталяція .NET SDK 10.0 для компіляції та збірки проекту - Встановлення .NET Hosting Bundle для підтримки ASP.NET Core на IIS 
+Інсталяція та налаштування IIS з необхідними модулями: 
+* -Application Request Routing (ARR) 
+* -URL Rewrite Module 
+* WebSocket Protocol (для real-time функціоналу) 
+* Налаштування Windows Firewall для дозволу HTTP/HTTPS трафіку
+КРОК 2: Налаштування залежностей 
+* Отримання виконуваного файлу Slicer (.exe) для обробки 3D-моделей 
+* Розміщення Slicer-утиліти в окремій директорії з правами виконання 
+* Оновлення конфігураційних файлів (appsettings.json та appsettings.Production.json) з актуальними параметрами.
+КРОК 3: Компіляція та публікація додатку 
+* Очищення попередніх збірок: dotnet clean - Збірка проекту 3DApi.csproj у Release-конфігурації 
+* Публікація додатку з оптимізацією для production-середовища: dotnet publish -c Release -r win-x64 --self-contained true 
+* Перевірка цілісності скомпільованих файлів 
+* Створення резервної копії попередньої версії (якщо існує) - Копіювання опублікованих файлів до робочої директорії IIS
+КРОК 4: Конфігурація IIS 
+* Створення нового Application Pool з наступними параметрами: 
+* Name: 3DPrintingSystemPool 
+* .NET CLR Version: No Managed Code (для .NET Core)
+* Managed Pipeline Mode: Integrated 
+* Start Mode: AlwaysRunning (для зменшення холодного старту) * Identity: 
+Створення веб-додатку в IIS Manager:
+* Application name: 3DPrintingAPI
+* Прив'язка до Application Pool (3DPrintingSystemPool)
+* Вказання фізичного шляху до опублікованих файлів
+* Налаштування binding (HTTP/HTTPS, порт, hostname)
+o HTTP: Port 80, All Unassigned
+o HTTPS: Port 443, SSL Certificate
+* Включення Preload для швидшого запуску
+Налаштування прав доступу:
+* Надання Application Pool Identity прав читання/запису до директорій
+* Конфігурація прав для директорії з файловим сховищем 3D-моделей
+* Надання прав на виконання Slicer.exe
+* Налаштування NTFS permissions для logs-директорії
+Додаткові налаштування безпеки:
+* Відключення Directory Browsing
+* Налаштування Request Filtering (обмеження розміру файлів)
+* Конфігурація Custom Headers (Security headers: X-Frame-Options, CSP)
+3.1.3. Структура розгорнутого додатку
+Розгорнута система має наступну архітектуру:
+3DApi (Web API)
+    ├── ApiControllers/           - REST API контролери
+    │   ├── AdminAnalyticsController   - аналітика для адміністраторів
+    │   ├── AdminCostController        - управління вартістю
+    │   ├── AdminMaterialsController   - управління матеріалами
+    │   ├── AdminPrintersController    - управління принтерами
+    │   ├── AdminPrintJobsController   - управління завданнями друку
+    │   ├── AdminUsersController       - управління користувачами
+    │   ├── PrinterController          - операції з принтерами
+    │   ├── PrintJobsController        - робота із завданнями друку
+    │   ├── SystemController           - системні операції
+    │   └── UsersController            - операції користувачів
+    │
+    ├── Infrastructure/           - інфраструктурний шар
+    │   ├── Services/             - бізнес-логіка та сервіси
+    │   │   ├── AuthService            - автентифікація та JWT
+    │   │   ├── PrintJobService        - обробка завдань друку
+    │   │   ├── SlicerService          - інтеграція з Slicer
+    │   │   ├── FileStorageService     - управління файлами
+    │   │   └── CostCalculationService - розрахунок вартості
+    │   ├── DataAccess/           - робота з базою даних
+    │   │   ├── ApplicationDbContext   - EF Core DbContext
+    │   │   └── Repositories/          - Repository pattern
+    │   └── Errors/               - обробка помилок
+    │       └── GlobalExceptionHandler - глобальний обробник
+    │
+    ├── Models/                   - моделі даних та DTO
+    │   ├── Entities/             - Entity models
+    │   └── DTOs/                 - Data Transfer Objects
+    │
+    ├── Middleware/               - custom middleware
+    │   ├── AuthenticationMiddleware
+    │   └── RequestLoggingMiddleware
+    │
+    ├── appsettings.json          - конфігурація (development)
+    ├── appsettings.Production.json - конфігурація (production)
+    ├── web.config                - конфігурація IIS
+    └── wwwroot/                  - статичні файли (якщо потрібно)
+3.2. Деплоймент бази даних
+3.2.1. Вибір СУБД та хостинг-платформи
+     Для зберігання даних програмної системи було обрано PostgreSQL, розгорнуту на платформі Azure (Azure Database for PostgreSQL - Flexible Server).
+Переваги використання PostgreSQL на Azure: 
+* Висока надійність та доступність (SLA 99.99% uptime) 
+* Автоматичне резервне копіювання з можливістю відновлення на будь-який момент 
+* Вбудовані механізми масштабування (вертикальне та горизонтальне) 
+* Автоматичні оновлення безпеки та патчі без простоїв 
+* Моніторинг продуктивності через Azure Portal та Azure Monitor
+* Підтримка SSL-з'єднань для безпеки даних в транзиті 
+* Відмінна сумісність з Entity Framework Core та LINQ 
+* Підтримка складних запитів, транзакцій та ACID-властивостей 
+* Вбудована підтримка JSON та JSONB для гнучких структур даних 
+* Розширена система індексування (B-tree, Hash, GiST, GIN) 
+* Managed service підхід - зменшення операційного навантаження
+3.2.2. Процес розгортання бази даних
+КРОК 1: Створення інстансу PostgreSQL в Azure 
+* Вхід до Azure Portal (portal.azure.com) 
+* Навігація до "Create a resource" → "Databases" → "Azure Database for PostgreSQL"
+* Вибір deployment option: Flexible Server (рекомендовано) 
+* Створення нового ресурсу "Azure Database for PostgreSQL" 
+* Вибір рівня продуктивності (SKU) відповідно до навантаження 
+* Конфігурація основних параметрів: 
+o Server name: <unique-name>.postgres.database.azure.com 
+o Версія PostgreSQL: 18 (найновіша стабільна) 
+o Розмір сховища: 32 GB (з можливістю автоматичного розширення) 
+o Регіон розміщення: Poland Central 
+o Compute tier: General Purpose 
+o Compute size: Burstable, B1ms, 1 vCores, 2 GiB RAM, 32 GiB storage 
+o High Availability: Zone-redundant (для критичних систем) 
+Налаштування адміністративного облікового запису: 
+* Admin username: pgadmin 
+* Password: strong password (мінімум 12 символів)
+КРОК 2: Налаштування безпеки та мережі 
+* Конфігурація Networking: Connectivity method: Public access (з обмеженням IP) 
+КРОК 3: Застосування міграцій Entity Framework Система використовує Code-First підхід з EF Core Migrations
+КРОК 4: Ініціалізація даних (Seeding) 
+- Виконання DbSeeder для заповнення початкових даних: 
+3.3. Автоматизація розгортання застосунку через ARM Templates
+3.3.1. Вибір інструменту Infrastructure as Code
+   Для автоматизації процесу розгортання було обрано ARM (Azure Resource Manager) Templates - нативний формат опису інфраструктури Azure у JSON. Переваги ARM Templates:
+* Декларативний підхід до опису інфраструктури;
+* Паралельне розгортання ресурсів для швидкості;
+* Вбудована валідація та перевірка залежностей;
+* Можливість експорту існуючої інфраструктури;
+* Підтримка параметризації та модульності;
+* Інтеграція з Azure DevOps та GitHub Actions.
+3.3.2. Основні ARM Templates
+Головний файл (azuredeploy.json):
+01: {
+02:     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+03:     "contentVersion": "1.0.0.0",
+04:     "parameters": {
+05:         "virtualMachines_VmBackend3d_name": {
+06:             "defaultValue": "VmBackend3d",
+07:             "type": "String"
+08:         },
+09:         "networkInterfaces_vmbackend3d124_name": {
+10:             "defaultValue": "vmbackend3d124",
+11:             "type": "String"
+12:         },
+13:         "publicIPAddresses_VmBackend3d_ip_name": {
+14:             "defaultValue": "VmBackend3d-ip",
+15:             "type": "String"
+16:         },
+17:         "virtualNetworks_VmBackend3d_vnet_name": {
+18:             "defaultValue": "VmBackend3d-vnet",
+19:             "type": "String"
+20:         },
+21:         "flexibleServers_3dbackend_name": {
+22:             "defaultValue": "3dbackend",
+23:             "type": "String"
+24:         },
+25:         "networkSecurityGroups_VmBackend3d_nsg_name": {
+26:             "defaultValue": "VmBackend3d-nsg",
+27:             "type": "String"
+28:         }
+29:     },
+30: }
+3.3.3. Алгоритм повторного розгортання
+1. Підготовка середовища
+az login
+az account set --subscription "<subscription-id>"
+2. Створення Resource Group
+az group create \
+  --name rg-3dprinting-prod \
+  --location polandcentral
+3. Валідація template
+az deployment group validate \
+  --resource-group rg-3dprinting-prod \
+  --template-file azuredeploy.json \
+  --parameters azuredeploy.parameters.json
+4. What-If аналіз змін
+az deployment group what-if \
+  --resource-group rg-3dprinting-prod \
+  --template-file azuredeploy.json \
+  --parameters azuredeploy.parameters.json
+5. Розгортання інфраструктури
+az deployment group create \
+  --resource-group rg-3dprinting-prod \
+  --template-file azuredeploy.json \
+  --parameters azuredeploy.parameters.json \
+  --mode Incremental
+6. Налаштування VM після розгортання
+     Підключення до VM через RDP та виконання скрипта PowerShell:
+01: # Встановлення IIS та необхідних компонентів
+02: Install-WindowsFeature -Name Web-Server -IncludeManagementTools
+03: Install-WindowsFeature -Name Web-Asp-Net45
+04: 
+05: # Встановлення .NET 10.0 Hosting Bundle
+06: Invoke-WebRequest -Uri "https://download.visualstudio.microsoft.com/..." `
+07:   -OutFile "dotnet-hosting.exe"
+08: Start-Process -FilePath "dotnet-hosting.exe" -Wait
+09: 
+10: # Створення Application Pool
+11: Import-Module WebAdministration
+12: New-WebAppPool -Name "3DPrintingSystemPool"
+13: Set-ItemProperty IIS:\AppPools\3DPrintingSystemPool managedRuntimeVersion ""
+14: 
+15: # Створення веб-додатку
+16: New-WebApplication -Name "3DPrintingAPI" `
+17:   -Site "Default Web Site" `
+18:   -PhysicalPath "C:\inetpub\wwwroot\3DPrintingAPI" `
+19:   -ApplicationPool "3DPrintingSystemPool"
+7. Деплой застосунку
+# Публікація проекту
+dotnet publish -c Release -r win-x64 --self-contained true -o ./publish
+az vm run-command invoke \
+  --resource-group rg-3dprinting-prod --name 3dprinting-vm-prod --command-id RunPowerShellScript --scripts @deploy.ps1
+4 ВИСНОВКИ
+     В результаті виконання лабораторної роботи номер п'ять було успішно здійснено повне розгортання програмної системи для управління 3D-друком на production-інфраструктурі хмарної платформи Microsoft Azure. Розгортання включало два основних компоненти: серверну частину у вигляді Web API та реляційну базу даних PostgreSQL, кожен з яких вимагав ретельного планування, конфігурування та верифікації.
+     Серверна частина системи була успішно розгорнута на віртуальній машині під управлінням операційної системи Windows Server 2025 з використанням веб-сервера Internet Information Services. Процес розгортання включав підготовку серверного середовища, інсталяцію необхідних компонентів .NET SDK та Hosting Bundle, конфігурування Application Pool з оптимальними параметрами, налаштування HTTPS з валідними SSL-сертифікатами, та конфігурування прав доступу для забезпечення безпеки системи. Особливу увагу було приділено налаштуванню інтеграції з утилітою Slicer для обробки 3D-моделей. Система пройшла всебічне тестування ключових ендпоінтів та верифікація показала стабільну роботу всіх компонентів API з коректною обробкою помилок.
+     База даних PostgreSQL була розгорнута на платформі Azure Database for PostgreSQL Flexible Server, що забезпечило високий рівень надійності з автоматичним резервним копіюванням та вбудованими механізмами моніторингу продуктивності. Процес розгортання включав створення managed instance з оптимальними параметрами, налаштування мережевої безпеки через firewall rules та SSL-шифрування з'єднань, створення схеми бази даних через застосування Entity Framework Core міграцій, та ініціалізацію системи початковими даними. Структура бази даних містить п'ять основних таблиць для управління користувачами, принтерами, матеріалами та завданнями друку, кожна з яких оснащена відповідними індексами для оптимізації продуктивності.
+     
+
+5 ПЕРЕЛІК ДЖЕРЕЛ ПОСИЛАННЯ
+    1. Refactoring: improving the design of existing code. Addison-Wesley Professional, 1999. 464 с.
+    2. Microsoft C# Coding Conventions. URL: https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions (дата звернення: 12.12.2025);
+    3. .NET Runtime Coding Style. URL: 
+https://github.com/dotnet/runtime/blob/main/docs/coding-guidelines/coding-style.md (дата звернення: 12.12.2025);
+    4. ASP.NET Core Documentation. URL: https://learn.microsoft.com/en-us/aspnet/core/ (дата звернення: 12.12.2025);
+    5. StyleCop Analyzers. URL: https://github.com/DotNetAnalyzers/StyleCopAnalyzers (дата звернення: 12.12.2025);
+    6. EditorConfig. URL:   https://editorconfig.org/ (дата звернення: 12.12.2025);
+    7. ReSharper Code Inspection. URL:   https://www.jetbrains.com/help/resharper/Code_Analysis__Code_Inspections.html (дата звернення: 12.12.2025).
+
+
+6 ДОДАТОК А
+Відеозапис:https://youtu.be/OT4Z1xMeTyM
+Хронологічний опис відеозапису:
+0:00-0:45 — Вступ та постановка задачі
+0:45-2:15 — Теоретична частина
+• 0:45-1:30 — Технологічний стек (Azure VM, IIS, PowerShell, ASP.NET Core Hosting Bundle)
+• 1:30-2:15 — Архітектура рішення (5 компонентів)
+2:15-3:30 — Огляд PowerShell скрипта
+• 2:15-2:45 — Структура скрипта (7 блоків)
+• 2:45-3:30 — Ключові особливості реалізації
+3:30-7:30 — Практична демонстрація
+• 3:30-4:00 — Підготовка середовища (Azure Portal, підключення через RDP)
+• 4:00-6:30 — Огляд налаштувань IIS та файлової структури
+• 6:30-7:30 — Перевірка зовнішнього доступу та IIS логів
+7:30-8:15 — Тестування працездатності
+• 7:30-7:45 — Перехід до Swagger
+• 7:45-8:00 — Виконання System Health endpoint
+• 8:00-8:15 — Початок тестування IoT пристрою
+8:15-9:00 — Робота з IoT пристроєм та чергою завдань
+• 8:15-8:30 — Зміна мови інтерфейсу
+• 8:30-8:45 — Створення джоби через бекенд
+• 8:45-9:00 — Обробка завдання принтером (завантаження G-code, парсинг, естімейти)
+9:00-10:00 — Висновки та результати роботи
+
+
+
+
+7 ДОДАТОК Б
+Графічні матеріали
+
+Рисунок Б.1 – Знімок екрану з IIS
+
+Рисунок Б.2 – API після розгортання
+
+Рисунок Б.2 – Знімок екрану з ресурсної групи в Azure
+6
+
+
