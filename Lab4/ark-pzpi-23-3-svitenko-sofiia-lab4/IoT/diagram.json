@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "author": "Sofiia Svitenko",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-lcd2004",
+      "id": "lcd",
+      "top": -200,
+      "left": -100,
+      "attrs": {
+        "pins": "i2c"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_up",
+      "top": 100,
+      "left": -200,
+      "attrs": {
+        "color": "green",
+        "label": "UP"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_down",
+      "top": 180,
+      "left": -200,
+      "attrs": {
+        "color": "blue",
+        "label": "DOWN"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_select",
+      "top": 100,
+      "left": -100,
+      "attrs": {
+        "color": "yellow",
+        "label": "SELECT"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_back",
+      "top": 180,
+      "left": -100,
+      "attrs": {
+        "color": "red",
+        "label": "BACK"
+      }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    
+    ["lcd:GND", "esp:GND", "black", [ "h0" ]],
+    ["lcd:VCC", "esp:VIN", "red", [ "h0" ]],
+    ["lcd:SDA", "esp:21", "green", [ "h0" ]],
+    ["lcd:SCL", "esp:22", "blue", [ "h0" ]],
+    
+    ["btn_up:1.l", "esp:15", "green", [ "h0" ]],
+    ["btn_up:2.l", "esp:GND", "black", [ "h0" ]],
+    
+    ["btn_down:1.l", "esp:2", "blue", [ "h0" ]],
+    ["btn_down:2.l", "esp:GND", "black", [ "h0" ]],
+    
+    ["btn_select:1.l", "esp:4", "yellow", [ "h0" ]],
+    ["btn_select:2.l", "esp:GND", "black", [ "h0" ]],
+    
+    ["btn_back:1.l", "esp:5", "red", [ "h0" ]],
+    ["btn_back:2.l", "esp:GND", "black", [ "h0" ]]
+  ],
+  "dependencies": {}
+}
